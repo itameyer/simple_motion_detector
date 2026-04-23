@@ -54,6 +54,7 @@ def _probe_video(path: str) -> tuple[float, tuple[int, int, int]]:
     cap = cv2.VideoCapture(path)
     if not cap.isOpened():
         print(f"[main] ERROR: cannot open '{path}'", file=sys.stderr)
+        raise FileNotFoundError(f"cannot open '{path}'")
         sys.exit(1)
 
     fps: float = cap.get(cv2.CAP_PROP_FPS)
@@ -147,6 +148,7 @@ def _await_shutdown(
 
 def main() -> None:
     try:
+        init_failed: bool = False
         args = _parse_args()
 
         fps, frame_shape = _probe_video(args.video)
@@ -162,11 +164,15 @@ def main() -> None:
             meta_to_det, meta_to_view, det_to_view, stop_event,
         )
         p1.join()
+    except FileNotFoundError as e:
+        print(f"[main] {e}", file=sys.stderr)
+        init_failed = True
     except KeyboardInterrupt:
         print("[main] KeyboardInterrupt received — shutting down")
         stop_event.set()
     finally:
-        _await_shutdown(p1, p2, p3, ring)
+        if not init_failed:
+            _await_shutdown(p1, p2, p3, ring)
 
 
 if __name__ == "__main__":
