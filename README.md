@@ -35,3 +35,7 @@ python main.py --video path/to/video.mp4
 | `--video PATH` | Path to the input video file (required) |
 | `-b, --blur-detections` | Blur detected regions instead of drawing bounding boxes |
 
+## Exception handeling
+
+a keyboard interrup exception is caught gracefully by the system.
+other exception are handled as a fast-fail (FileNotFound, etc.) by the init_successful variable, but aren't addressed specifically.
