@@ -146,21 +146,27 @@ def _await_shutdown(
 # --------------------------------------------------------------------------- #
 
 def main() -> None:
-    args = _parse_args()
+    try:
+        args = _parse_args()
 
-    fps, frame_shape = _probe_video(args.video)
-    ring = _allocate_ring(frame_shape)
+        fps, frame_shape = _probe_video(args.video)
+        ring = _allocate_ring(frame_shape)
 
-    meta_to_det  = mp.Queue(maxsize=QUEUE_MAXSIZE)
-    meta_to_view = mp.Queue(maxsize=QUEUE_MAXSIZE)
-    det_to_view  = mp.Queue(maxsize=QUEUE_MAXSIZE)
-    stop_event   = mp.Event()
+        meta_to_det  = mp.Queue(maxsize=QUEUE_MAXSIZE)
+        meta_to_view = mp.Queue(maxsize=QUEUE_MAXSIZE)
+        det_to_view  = mp.Queue(maxsize=QUEUE_MAXSIZE)
+        stop_event   = mp.Event()
 
-    p1, p2, p3 = _spawn_processes(
-        args.video, ring, fps, frame_shape, args.blur_detections,
-        meta_to_det, meta_to_view, det_to_view, stop_event,
-    )
-    _await_shutdown(p1, p2, p3, ring)
+        p1, p2, p3 = _spawn_processes(
+            args.video, ring, fps, frame_shape, args.blur_detections,
+            meta_to_det, meta_to_view, det_to_view, stop_event,
+        )
+        p1.join()
+    except KeyboardInterrupt:
+        print("[main] KeyboardInterrupt received — shutting down")
+        stop_event.set()
+    finally:
+        _await_shutdown(p1, p2, p3, ring)
 
 
 if __name__ == "__main__":
