@@ -96,7 +96,7 @@ def _spawn_processes(
     meta_to_view: mp.queues.Queue,
     det_to_view: mp.queues.Queue,
     stop_event: mp.synchronize.Event,
-) -> tuple[mp.Process, mp.Process, mp.Process]:
+) -> tuple[mp.Process, mp.Process, mp.Process, bool]:
     from reader import run_reader
     from detector import run_detector
     from viewer import run_viewer
@@ -124,7 +124,7 @@ def _spawn_processes(
     for proc in (p1, p2, p3):
         proc.start()
     print("[main] Reader, Detector, and Viewer spawned")
-    return p1, p2, p3
+    return p1, p2, p3, True
 
 
 def _await_shutdown(
@@ -148,7 +148,6 @@ def _await_shutdown(
 
 def main() -> None:
     try:
-        init_failed: bool = False
         args = _parse_args()
 
         fps, frame_shape = _probe_video(args.video)
@@ -159,19 +158,16 @@ def main() -> None:
         det_to_view  = mp.Queue(maxsize=QUEUE_MAXSIZE)
         stop_event   = mp.Event()
 
-        p1, p2, p3 = _spawn_processes(
+        p1, p2, p3, init_successful = _spawn_processes(
             args.video, ring, fps, frame_shape, args.blur_detections,
             meta_to_det, meta_to_view, det_to_view, stop_event,
         )
         p1.join()
-    except FileNotFoundError as e:
-        print(f"[main] {e}", file=sys.stderr)
-        init_failed = True
     except KeyboardInterrupt:
         print("[main] KeyboardInterrupt received — shutting down")
         stop_event.set()
     finally:
-        if not init_failed:
+        if init_successful:
             _await_shutdown(p1, p2, p3, ring)
 
 
