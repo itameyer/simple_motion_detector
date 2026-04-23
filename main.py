@@ -148,6 +148,7 @@ def _await_shutdown(
 
 def main() -> None:
     try:
+        init_successful = False
         args = _parse_args()
 
         fps, frame_shape = _probe_video(args.video)
